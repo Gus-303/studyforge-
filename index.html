@@ -246,6 +246,38 @@
   .key-point { display: flex; gap: 12px; padding: 10px 13px; background: rgba(200,241,53,0.04); border-radius: 6px; margin-bottom: 7px; font-size: 12px; line-height: 1.5; }
   .key-point::before { content: '→'; color: var(--accent); flex-shrink: 0; font-size: 12px; }
 
+  /* INPUT TOGGLE */
+  .input-toggle {
+    display: flex; gap: 0; margin-bottom: 14px;
+    border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+  }
+  .input-tab {
+    flex: 1; padding: 11px; background: var(--card); border: none;
+    color: var(--muted); font-family: 'DM Mono', monospace; font-size: 12px;
+    letter-spacing: 1px; cursor: pointer; transition: all 0.2s;
+  }
+  .input-tab:hover { color: var(--text); }
+  .input-tab.active { background: rgba(200,241,53,0.08); color: var(--accent); }
+
+  /* DROP ZONE */
+  .drop-zone {
+    border: 2px dashed var(--border); border-radius: 10px;
+    padding: 40px 24px; text-align: center; cursor: pointer;
+    transition: all 0.2s; background: var(--card); min-height: 160px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  }
+  .drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: rgba(200,241,53,0.04); }
+  .drop-zone.has-file { border-color: var(--accent); border-style: solid; }
+  .drop-icon { font-size: 32px; }
+  .drop-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; }
+  .drop-sub { font-size: 11px; color: var(--muted); letter-spacing: 1px; }
+  .drop-preview {
+    margin-top: 10px; padding: 10px 16px;
+    background: rgba(200,241,53,0.08); border-radius: 6px;
+    font-size: 12px; color: var(--accent);
+    display: flex; align-items: center; gap: 8px;
+  }
+
   /* ERROR */
   .error-box { padding: 14px 18px; background: rgba(255,68,102,0.08); border: 1px solid rgba(255,68,102,0.3); border-radius: 8px; color: var(--error); font-size: 12px; margin-bottom: 18px; display: none; }
   .error-box.visible { display: block; }
@@ -320,8 +352,27 @@
     </div>
 
     <div style="margin-bottom:28px">
-      <label>Colle ton cours ou ta leçon ici</label>
-      <textarea id="courseText" placeholder="Ex : La dérivée d'une fonction f en un point a est la limite du taux d'accroissement... Colle ici n'importe quel texte de cours."></textarea>
+      <!-- INPUT MODE TOGGLE -->
+      <div class="input-toggle">
+        <button class="input-tab active" id="tabText" onclick="switchInput('text')">✏️ Coller du texte</button>
+        <button class="input-tab" id="tabFile" onclick="switchInput('file')">📎 Importer un fichier</button>
+      </div>
+
+      <!-- TEXT MODE -->
+      <div id="inputText">
+        <textarea id="courseText" placeholder="Ex : La dérivée d'une fonction f en un point a est la limite du taux d'accroissement... Colle ici n'importe quel texte de cours."></textarea>
+      </div>
+
+      <!-- FILE MODE -->
+      <div id="inputFile" style="display:none">
+        <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+          <input type="file" id="fileInput" accept=".pdf,image/*" style="display:none" onchange="handleFile(this.files[0])">
+          <div class="drop-icon" id="dropIcon">📄</div>
+          <div class="drop-title" id="dropTitle">Glisse ton fichier ici</div>
+          <div class="drop-sub" id="dropSub">PDF ou image (photo de cours, screenshot) · Cliquer pour parcourir</div>
+          <div class="drop-preview" id="dropPreview" style="display:none"></div>
+        </div>
+      </div>
     </div>
 
     <label>Ce que tu veux générer</label>
@@ -466,20 +517,69 @@
     count = parseInt(el.dataset.val);
   }
 
+  // ─── FILE UPLOAD ──────────────────────────────────────────
+  let uploadedFile = null;
+  let inputMode = 'text';
+
+  function switchInput(mode) {
+    inputMode = mode;
+    document.getElementById('inputText').style.display = mode === 'text' ? 'block' : 'none';
+    document.getElementById('inputFile').style.display = mode === 'file' ? 'block' : 'none';
+    document.getElementById('tabText').classList.toggle('active', mode === 'text');
+    document.getElementById('tabFile').classList.toggle('active', mode === 'file');
+  }
+
+  function handleFile(file) {
+    if (!file) return;
+    uploadedFile = file;
+    const zone = document.getElementById('dropZone');
+    zone.classList.add('has-file');
+    document.getElementById('dropIcon').textContent = file.type.includes('pdf') ? '📄' : '🖼️';
+    document.getElementById('dropTitle').textContent = file.name;
+    document.getElementById('dropSub').textContent = (file.size / 1024).toFixed(0) + ' KB · Cliquer pour changer';
+    const preview = document.getElementById('dropPreview');
+    preview.style.display = 'flex';
+    preview.textContent = '✓ Fichier prêt à analyser';
+  }
+
+  // Drag & drop
+  document.addEventListener('DOMContentLoaded', () => {
+    const zone = document.getElementById('dropZone');
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault(); zone.classList.remove('dragover');
+      if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    });
+  });
+
+  async function fileToBase64(file) {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result.split(',')[1]);
+      r.onerror = () => rej(new Error('Lecture échouée'));
+      r.readAsDataURL(file);
+    });
+  }
+
   // ─── GENERATE ─────────────────────────────────────────────
   async function generate() {
-    if (!isPro && credits <= 0) {
-      openModal('yearly');
-      return;
-    }
-    const text = document.getElementById('courseText').value.trim();
-    if (!text || text.length < 30) {
-      showError('Merci de coller un texte de cours (minimum 30 caractères).');
-      return;
+    if (!isPro && credits <= 0) { openModal('yearly'); return; }
+
+    let text = '';
+    let fileData = null;
+    let fileType = '';
+
+    if (inputMode === 'text') {
+      text = document.getElementById('courseText').value.trim();
+      if (!text || text.length < 30) { showError('Merci de coller un texte de cours (minimum 30 caractères).'); return; }
+    } else {
+      if (!uploadedFile) { showError("Merci d'importer un fichier PDF ou une image."); return; }
+      try { fileData = await fileToBase64(uploadedFile); fileType = uploadedFile.type; }
+      catch(e) { showError('Impossible de lire le fichier. Réessaie.'); return; }
     }
     hideError();
 
-    // Deduct credit
     if (!isPro) {
       credits = Math.max(0, credits - 1);
       localStorage.setItem('sf_credits', credits);
@@ -491,31 +591,45 @@
     document.getElementById('formSection').style.display = 'none';
     document.getElementById('loader').classList.add('visible');
 
-    const msgs = ['Analyse du cours…', 'Génération des questions…', 'Construction des flashcards…', 'Rédaction du résumé…'];
+    const msgs = ['Analyse du fichier…', 'Génération des questions…', 'Construction des flashcards…', 'Rédaction du résumé…'];
     let mi = 0;
     const lt = document.getElementById('loaderText');
     const iv = setInterval(() => { mi = (mi+1)%msgs.length; lt.textContent = msgs[mi]; }, 1200);
 
     const wQ = selected.has('qcm'), wF = selected.has('flash'), wS = selected.has('summary');
 
-    const prompt = `Tu es un expert pédagogique. Analyse ce cours et génère le contenu.
-
-COURS:
-${text}
-
-GÉNÈRE un JSON valide uniquement (pas de markdown, pas de backticks):
-{
+    const jsonSchema = `{
   ${wQ ? `"qcm": [${count} objets: "question","options"(4 strings),"correct"(0-3),"explanation"],` : '"qcm": [],'}
   ${wF ? `"flashcards": [${count} objets: "concept","definition","category"],` : '"flashcards": [],'}
   ${wS ? `"summary": {"title":"","intro":"","sections":[{"title":"","points":[]}]}` : '"summary": null'}
-}
-Tout en français. JSON strict uniquement.`;
+}`;
+
+    const promptText = `Tu es un expert pédagogique. Analyse ce cours et génère le contenu.\n\nCOURS:\n${text}\n\nGÉNÈRE un JSON valide uniquement (pas de markdown):\n${jsonSchema}\nTout en français. JSON strict uniquement.`;
+    const promptFile = `Tu es un expert pédagogique. Analyse le document/image fourni et génère le contenu de révision.\n\nGÉNÈRE un JSON valide uniquement (pas de markdown):\n${jsonSchema}\nTout en français. JSON strict uniquement.`;
+
+    // Build message content
+    let msgContent;
+    if (fileData) {
+      if (fileType === 'application/pdf') {
+        msgContent = [
+          { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: fileData } },
+          { type: 'text', text: promptFile }
+        ];
+      } else {
+        msgContent = [
+          { type: 'image', source: { type: 'base64', media_type: fileType, data: fileData } },
+          { type: 'text', text: promptFile }
+        ];
+      }
+    } else {
+      msgContent = promptText;
+    }
 
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 4000, messages: [{ role: "user", content: prompt }] })
+        body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 4000, messages: [{ role: "user", content: msgContent }] })
       });
       const data = await res.json();
       clearInterval(iv);
