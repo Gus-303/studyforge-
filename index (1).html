@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudyForge — Révise autrement</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://js.stripe.com/v3/"></script>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --border: #1e1e2e;
+    --accent: #c8f135;
+    --accent2: #7c3aed;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --card: #13131e;
+    --error: #ff4466;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'DM Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(200,241,53,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(200,241,53,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .container { max-width: 900px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* HEADER */
+  header { padding: 32px 0 24px; border-bottom: 1px solid var(--border); margin-bottom: 40px; display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 24px; letter-spacing: -1px; display: flex; align-items: center; gap: 10px; }
+  .logo-dot { width: 9px; height: 9px; background: var(--accent); border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)} }
+
+  /* CREDITS BADGE */
+  .credits-badge {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 20px; padding: 8px 16px; font-size: 12px;
+  }
+  .credits-num { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 16px; color: var(--accent); }
+  .credits-label { color: var(--muted); font-size: 11px; }
+  .pro-badge { background: var(--accent); color: var(--bg); font-family: 'Syne', sans-serif; font-weight: 800; font-size: 11px; padding: 4px 10px; border-radius: 10px; letter-spacing: 1px; }
+
+  /* PRICING BANNER */
+  .pricing-banner {
+    background: linear-gradient(135deg, rgba(200,241,53,0.08), rgba(124,58,237,0.08));
+    border: 1px solid rgba(200,241,53,0.2);
+    border-radius: 12px; padding: 20px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 32px; gap: 16px;
+  }
+  .pricing-banner.hidden { display: none; }
+  .pricing-info { flex: 1; }
+  .pricing-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+  .pricing-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .pricing-plans { display: flex; gap: 10px; flex-shrink: 0; }
+
+  /* PLAN CARDS */
+  .plan-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 20px; text-align: center;
+    cursor: pointer; transition: all 0.2s; min-width: 130px;
+  }
+  .plan-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .plan-card.featured { border-color: var(--accent); background: rgba(200,241,53,0.05); }
+  .plan-price { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; color: var(--accent); }
+  .plan-period { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+  .plan-name { font-size: 11px; color: var(--muted); margin-top: 4px; letter-spacing: 1px; text-transform: uppercase; }
+  .plan-features { font-size: 11px; color: var(--text); margin-top: 8px; line-height: 1.6; }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+    z-index: 100; display: flex; align-items: center; justify-content: center;
+    padding: 24px; backdrop-filter: blur(4px);
+    opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .modal-overlay.visible { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 36px; max-width: 440px; width: 100%;
+    transform: translateY(20px); transition: transform 0.2s;
+  }
+  .modal-overlay.visible .modal { transform: translateY(0); }
+  .modal-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; margin-bottom: 6px; }
+  .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 28px; line-height: 1.5; }
+
+  .modal-plans { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+  .modal-plan {
+    border: 2px solid var(--border); border-radius: 10px; padding: 16px;
+    cursor: pointer; transition: all 0.15s; text-align: center;
+  }
+  .modal-plan:hover { border-color: rgba(200,241,53,0.4); }
+  .modal-plan.selected { border-color: var(--accent); background: rgba(200,241,53,0.05); }
+  .modal-plan-price { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px; color: var(--accent); }
+  .modal-plan-name { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
+  .modal-plan-feat { font-size: 11px; color: var(--text); margin-top: 8px; line-height: 1.5; }
+
+  /* STRIPE CARD */
+  #card-element {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px 16px; margin-bottom: 16px;
+    transition: border-color 0.2s;
+  }
+  #card-element.focused { border-color: var(--accent); }
+  #card-errors { color: var(--error); font-size: 12px; margin-bottom: 14px; min-height: 18px; }
+
+  .btn-pay {
+    width: 100%; padding: 16px;
+    background: var(--accent); color: var(--bg);
+    border: none; border-radius: 8px;
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 14px;
+    cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 1px;
+  }
+  .btn-pay:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(200,241,53,0.25); }
+  .btn-pay:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-close-modal {
+    background: none; border: none; color: var(--muted);
+    font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+    cursor: pointer; margin-top: 12px; width: 100%; padding: 8px;
+    font-family: 'DM Mono', monospace;
+  }
+  .btn-close-modal:hover { color: var(--text); }
+
+  .modal-secure { font-size: 10px; color: var(--muted); text-align: center; margin-top: 12px; }
+
+  /* SUCCESS STATE */
+  .success-modal { text-align: center; padding: 20px 0; }
+  .success-icon { font-size: 48px; margin-bottom: 16px; }
+  .success-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; margin-bottom: 8px; color: var(--accent); }
+  .success-text { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+  /* STEPS */
+  .steps { display: flex; gap: 8px; margin-bottom: 36px; align-items: center; }
+  .step { display: flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); transition: color 0.3s; }
+  .step.active { color: var(--accent); }
+  .step-num { width: 22px; height: 22px; border-radius: 50%; border: 1px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; flex-shrink: 0; }
+  .step.active .step-num { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .step-sep { flex: 1; height: 1px; background: var(--border); max-width: 40px; }
+
+  /* INPUT */
+  label { display: block; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+  textarea { width: 100%; height: 190px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 18px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; line-height: 1.7; resize: vertical; transition: border-color 0.2s, box-shadow 0.2s; outline: none; }
+  textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(200,241,53,0.08); }
+  textarea::placeholder { color: var(--muted); }
+
+  /* OPTIONS */
+  .options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 20px 0; }
+  .option-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; cursor: pointer; transition: all 0.2s; user-select: none; }
+  .option-card:hover { border-color: rgba(200,241,53,0.3); }
+  .option-card.selected { border-color: var(--accent); background: rgba(200,241,53,0.05); }
+  .option-icon { font-size: 18px; margin-bottom: 6px; }
+  .option-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; margin-bottom: 3px; }
+  .option-desc { font-size: 11px; color: var(--muted); line-height: 1.4; }
+  .option-check { width: 16px; height: 16px; border: 1px solid var(--border); border-radius: 4px; margin-top: 8px; display: flex; align-items: center; justify-content: center; font-size: 10px; transition: all 0.2s; }
+  .option-card.selected .option-check { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+
+  /* COUNT */
+  .count-row { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+  .count-label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+  .count-btns { display: flex; gap: 4px; }
+  .count-btn { width: 32px; height: 32px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+  .count-btn:hover, .count-btn.active { border-color: var(--accent); background: rgba(200,241,53,0.08); color: var(--accent); }
+
+  /* GENERATE BTN */
+  .btn-generate { width: 100%; padding: 17px; background: var(--accent); color: var(--bg); border: none; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 14px; letter-spacing: 1px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; text-transform: uppercase; }
+  .btn-generate:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(200,241,53,0.25); }
+  .btn-generate:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* LOADER */
+  .loader { display: none; flex-direction: column; align-items: center; padding: 60px 0; gap: 20px; }
+  .loader.visible { display: flex; }
+  .loader-bar { width: 200px; height: 2px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .loader-fill { height: 100%; background: var(--accent); border-radius: 2px; animation: loading 1.5s ease-in-out infinite; }
+  @keyframes loading { 0%{width:0%;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0%;margin-left:100%} }
+  .loader-text { font-size: 12px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+
+  /* RESULTS */
+  #results { display: none; }
+  #results.visible { display: block; }
+  .results-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .results-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px; }
+  .btn-reset { background: none; border: 1px solid var(--border); color: var(--muted); padding: 8px 16px; border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 11px; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; transition: all 0.2s; }
+  .btn-reset:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* TABS */
+  .tabs { display: flex; gap: 0; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
+  .tab { padding: 11px 22px; font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-badge { background: var(--border); color: var(--muted); padding: 2px 6px; border-radius: 10px; font-size: 9px; }
+  .tab.active .tab-badge { background: rgba(200,241,53,0.15); color: var(--accent); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* QCM */
+  .qcm-item { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 22px; margin-bottom: 14px; }
+  .qcm-num { font-size: 10px; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; }
+  .qcm-question { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 14px; margin-bottom: 14px; line-height: 1.5; }
+  .qcm-options { display: grid; gap: 7px; }
+  .qcm-option { padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; font-size: 13px; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 10px; }
+  .qcm-option:hover { border-color: rgba(200,241,53,0.3); }
+  .qcm-option.correct { border-color: var(--accent); background: rgba(200,241,53,0.08); color: var(--accent); }
+  .qcm-option.wrong { border-color: var(--error); background: rgba(255,68,102,0.08); color: var(--error); }
+  .opt-letter { width: 22px; height: 22px; border-radius: 4px; background: var(--border); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; flex-shrink: 0; }
+  .explanation { margin-top: 12px; padding: 11px 14px; background: rgba(200,241,53,0.05); border-left: 2px solid var(--accent); border-radius: 0 6px 6px 0; font-size: 12px; color: var(--muted); display: none; line-height: 1.6; }
+  .explanation.visible { display: block; }
+  .score-row { display: flex; align-items: center; gap: 16px; padding: 14px 18px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; margin-top: 18px; }
+  .score-label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); flex-shrink: 0; }
+  .score-track { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .score-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.5s ease; width: 0%; }
+  .score-val { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; color: var(--accent); flex-shrink: 0; min-width: 40px; text-align: right; }
+
+  /* FLASHCARDS */
+  .flashcard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .flashcard { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 22px; cursor: pointer; min-height: 130px; display: flex; flex-direction: column; transition: all 0.2s; position: relative; overflow: hidden; }
+  .flashcard:hover { border-color: rgba(200,241,53,0.3); transform: translateY(-2px); }
+  .flashcard::after { content: 'Cliquer pour révéler'; position: absolute; bottom: 10px; right: 12px; font-size: 9px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+  .flashcard.revealed::after { content: 'Cliquer pour masquer'; }
+  .flashcard-front { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; flex: 1; line-height: 1.5; }
+  .flashcard-tag { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 7px; }
+  .flashcard-back { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .flashcard.revealed .flashcard-back { display: block; }
+
+  /* SUMMARY */
+  .summary-block { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 26px; line-height: 1.8; }
+  .summary-block h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; color: var(--accent); margin-bottom: 10px; margin-top: 22px; display: flex; align-items: center; gap: 8px; }
+  .summary-block h3:first-child { margin-top: 0; }
+  .summary-block h3::before { content: ''; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; flex-shrink: 0; }
+  .summary-block p { font-size: 13px; color: var(--text); margin-bottom: 10px; }
+  .key-point { display: flex; gap: 12px; padding: 10px 13px; background: rgba(200,241,53,0.04); border-radius: 6px; margin-bottom: 7px; font-size: 12px; line-height: 1.5; }
+  .key-point::before { content: '→'; color: var(--accent); flex-shrink: 0; font-size: 12px; }
+
+  /* ERROR */
+  .error-box { padding: 14px 18px; background: rgba(255,68,102,0.08); border: 1px solid rgba(255,68,102,0.3); border-radius: 8px; color: var(--error); font-size: 12px; margin-bottom: 18px; display: none; }
+  .error-box.visible { display: block; }
+
+  /* PAYWALL */
+  .paywall-overlay {
+    background: linear-gradient(135deg, rgba(10,10,15,0.95), rgba(124,58,237,0.15));
+    border: 1px solid rgba(200,241,53,0.2);
+    border-radius: 12px; padding: 40px; text-align: center; margin-top: 20px;
+  }
+  .paywall-icon { font-size: 40px; margin-bottom: 16px; }
+  .paywall-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; margin-bottom: 8px; }
+  .paywall-desc { font-size: 13px; color: var(--muted); margin-bottom: 28px; line-height: 1.6; max-width: 380px; margin-left: auto; margin-right: auto; }
+  .btn-unlock { padding: 16px 40px; background: var(--accent); color: var(--bg); border: none; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 14px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 1px; }
+  .btn-unlock:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(200,241,53,0.3); }
+
+  @media(max-width:600px){
+    .options{grid-template-columns:1fr}
+    .flashcard-grid{grid-template-columns:1fr}
+    .modal-plans{grid-template-columns:1fr}
+    .pricing-banner{flex-direction:column}
+    .pricing-plans{width:100%}
+    .plan-card{flex:1}
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo">
+      <span class="logo-dot"></span>
+      StudyForge
+    </div>
+    <div id="creditsBadge" class="credits-badge">
+      <div>
+        <div class="credits-num" id="creditsNum">5</div>
+        <div class="credits-label">générations gratuites</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- PRICING BANNER -->
+  <div class="pricing-banner" id="pricingBanner">
+    <div class="pricing-info">
+      <div class="pricing-title">🚀 Passe à l'illimité</div>
+      <div class="pricing-desc">Tu as utilisé tes générations gratuites. Débloques l'accès illimité pour continuer à réviser sans limites.</div>
+    </div>
+    <div class="pricing-plans">
+      <div class="plan-card" onclick="openModal('monthly')">
+        <div class="plan-price">4,99€</div>
+        <div class="plan-period">/mois</div>
+        <div class="plan-name">Mensuel</div>
+        <div class="plan-features">Illimité<br>Annulable</div>
+      </div>
+      <div class="plan-card featured" onclick="openModal('yearly')">
+        <div class="plan-price">2,99€</div>
+        <div class="plan-period">/mois</div>
+        <div class="plan-name">Annuel · -40%</div>
+        <div class="plan-features">Illimité<br>35,88€/an</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FORM -->
+  <div id="formSection">
+    <div class="steps">
+      <div class="step active"><div class="step-num">1</div><span>Cours</span></div>
+      <div class="step-sep"></div>
+      <div class="step"><div class="step-num">2</div><span>Options</span></div>
+      <div class="step-sep"></div>
+      <div class="step"><div class="step-num">3</div><span>Révision</span></div>
+    </div>
+
+    <div style="margin-bottom:28px">
+      <label>Colle ton cours ou ta leçon ici</label>
+      <textarea id="courseText" placeholder="Ex : La dérivée d'une fonction f en un point a est la limite du taux d'accroissement... Colle ici n'importe quel texte de cours."></textarea>
+    </div>
+
+    <label>Ce que tu veux générer</label>
+    <div class="options">
+      <div class="option-card selected" data-type="qcm" onclick="toggleOption(this)">
+        <div class="option-icon">🎯</div>
+        <div class="option-title">QCM</div>
+        <div class="option-desc">Questions à choix multiples avec correction</div>
+        <div class="option-check">✓</div>
+      </div>
+      <div class="option-card selected" data-type="flash" onclick="toggleOption(this)">
+        <div class="option-icon">⚡</div>
+        <div class="option-title">Flashcards</div>
+        <div class="option-desc">Cartes question / réponse</div>
+        <div class="option-check">✓</div>
+      </div>
+      <div class="option-card selected" data-type="summary" onclick="toggleOption(this)">
+        <div class="option-icon">📋</div>
+        <div class="option-title">Résumé</div>
+        <div class="option-desc">Synthèse structurée des points clés</div>
+        <div class="option-check">✓</div>
+      </div>
+    </div>
+
+    <div class="count-row">
+      <span class="count-label">Nombre de questions</span>
+      <div class="count-btns">
+        <button class="count-btn" data-val="3" onclick="setCount(this)">3</button>
+        <button class="count-btn active" data-val="5" onclick="setCount(this)">5</button>
+        <button class="count-btn" data-val="8" onclick="setCount(this)">8</button>
+        <button class="count-btn" data-val="10" onclick="setCount(this)">10</button>
+      </div>
+    </div>
+
+    <div class="error-box" id="errorBox"></div>
+    <button class="btn-generate" id="generateBtn" onclick="generate()">
+      <span>⚡</span> Générer ma révision
+    </button>
+  </div>
+
+  <!-- LOADER -->
+  <div class="loader" id="loader">
+    <div class="loader-bar"><div class="loader-fill"></div></div>
+    <div class="loader-text" id="loaderText">Analyse du cours…</div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results">
+    <div class="results-header">
+      <div class="results-title">Tes fiches de révision</div>
+      <button class="btn-reset" onclick="reset()">← Nouveau cours</button>
+    </div>
+    <div class="tabs" id="tabBar"></div>
+    <div id="tabContents"></div>
+  </div>
+</div>
+
+<!-- PAYMENT MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+  <div class="modal" id="modalBox">
+    <div id="modalContent">
+      <div class="modal-title">Accès illimité 🚀</div>
+      <div class="modal-sub">Choisis ton plan et commence à réviser sans limites. Paiement sécurisé par Stripe.</div>
+
+      <div class="modal-plans">
+        <div class="modal-plan" id="planMonthly" onclick="selectPlan('monthly')">
+          <div class="modal-plan-price">4,99€</div>
+          <div class="modal-plan-name">Mensuel</div>
+          <div class="modal-plan-feat">Illimité<br>Annulable à tout moment</div>
+        </div>
+        <div class="modal-plan selected" id="planYearly" onclick="selectPlan('yearly')">
+          <div class="modal-plan-price">2,99€</div>
+          <div class="modal-plan-name">Annuel · -40%</div>
+          <div class="modal-plan-feat">Illimité<br>35,88€ facturés/an</div>
+        </div>
+      </div>
+
+      <div id="card-element"></div>
+      <div id="card-errors"></div>
+
+      <button class="btn-pay" id="payBtn" onclick="processPayment()">
+        Débloquer l'accès illimité
+      </button>
+      <button class="btn-close-modal" onclick="closeModal()">Annuler</button>
+      <div class="modal-secure">🔒 Paiement 100% sécurisé · Stripe · Données chiffrées SSL</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ─── STATE ───────────────────────────────────────────────
+  const STRIPE_KEY = 'pk_test_51TAx4BBdyslbfoIvYu1fRmN1FIoXfAOMp6q7go9NDzIBWIR1HFmD9aeqaDDE0qIxWUEWWPa4WSM0haARtw4HmWZJ00VUXvn1IBy';
+  const FREE_CREDITS = 5;
+
+  let count = 5;
+  let selected = new Set(['qcm', 'flash', 'summary']);
+  let scores = { correct: 0, total: 0 };
+  let stripe, cardElement, selectedPlan = 'yearly';
+  let isPro = localStorage.getItem('sf_pro') === '1';
+  let credits = parseInt(localStorage.getItem('sf_credits') ?? FREE_CREDITS);
+
+  // ─── INIT ─────────────────────────────────────────────────
+  function init() {
+    updateCreditsUI();
+    document.getElementById('pricingBanner').classList.add('hidden'); // hide by default
+    if (isPro) showProState();
+  }
+
+  function updateCreditsUI() {
+    const badge = document.getElementById('creditsBadge');
+    const num = document.getElementById('creditsNum');
+    if (isPro) {
+      badge.innerHTML = '<span class="pro-badge">PRO ∞</span>';
+    } else {
+      num.textContent = credits;
+      if (credits <= 1) num.style.color = '#ff4466';
+    }
+  }
+
+  function showProState() {
+    document.getElementById('pricingBanner').classList.add('hidden');
+  }
+
+  // ─── OPTIONS ──────────────────────────────────────────────
+  function toggleOption(el) {
+    const t = el.dataset.type;
+    if (selected.has(t)) {
+      if (selected.size === 1) return;
+      selected.delete(t);
+      el.classList.remove('selected');
+      el.querySelector('.option-check').textContent = '';
+    } else {
+      selected.add(t);
+      el.classList.add('selected');
+      el.querySelector('.option-check').textContent = '✓';
+    }
+  }
+
+  function setCount(el) {
+    document.querySelectorAll('.count-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    count = parseInt(el.dataset.val);
+  }
+
+  // ─── GENERATE ─────────────────────────────────────────────
+  async function generate() {
+    if (!isPro && credits <= 0) {
+      openModal('yearly');
+      return;
+    }
+    const text = document.getElementById('courseText').value.trim();
+    if (!text || text.length < 30) {
+      showError('Merci de coller un texte de cours (minimum 30 caractères).');
+      return;
+    }
+    hideError();
+
+    // Deduct credit
+    if (!isPro) {
+      credits = Math.max(0, credits - 1);
+      localStorage.setItem('sf_credits', credits);
+      updateCreditsUI();
+    }
+
+    const btn = document.getElementById('generateBtn');
+    btn.disabled = true;
+    document.getElementById('formSection').style.display = 'none';
+    document.getElementById('loader').classList.add('visible');
+
+    const msgs = ['Analyse du cours…', 'Génération des questions…', 'Construction des flashcards…', 'Rédaction du résumé…'];
+    let mi = 0;
+    const lt = document.getElementById('loaderText');
+    const iv = setInterval(() => { mi = (mi+1)%msgs.length; lt.textContent = msgs[mi]; }, 1200);
+
+    const wQ = selected.has('qcm'), wF = selected.has('flash'), wS = selected.has('summary');
+
+    const prompt = `Tu es un expert pédagogique. Analyse ce cours et génère le contenu.
+
+COURS:
+${text}
+
+GÉNÈRE un JSON valide uniquement (pas de markdown, pas de backticks):
+{
+  ${wQ ? `"qcm": [${count} objets: "question","options"(4 strings),"correct"(0-3),"explanation"],` : '"qcm": [],'}
+  ${wF ? `"flashcards": [${count} objets: "concept","definition","category"],` : '"flashcards": [],'}
+  ${wS ? `"summary": {"title":"","intro":"","sections":[{"title":"","points":[]}]}` : '"summary": null'}
+}
+Tout en français. JSON strict uniquement.`;
+
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 4000, messages: [{ role: "user", content: prompt }] })
+      });
+      const data = await res.json();
+      clearInterval(iv);
+      if (!res.ok || data.error) throw new Error(data.error?.message || 'Erreur API');
+      const raw = data.content.map(i => i.text||'').join('');
+      const parsed = JSON.parse(raw.replace(/```json|```/g,'').trim());
+      renderResults(parsed, wQ, wF, wS);
+    } catch(err) {
+      clearInterval(iv);
+      document.getElementById('loader').classList.remove('visible');
+      document.getElementById('formSection').style.display = 'block';
+      btn.disabled = false;
+      if (!isPro) { credits++; localStorage.setItem('sf_credits', credits); updateCreditsUI(); }
+      showError('Erreur lors de la génération. Réessaie.');
+    }
+  }
+
+  function renderResults(data, wQ, wF, wS) {
+    document.getElementById('loader').classList.remove('visible');
+    const results = document.getElementById('results');
+    results.classList.add('visible');
+    const tabBar = document.getElementById('tabBar');
+    const tabContents = document.getElementById('tabContents');
+    tabBar.innerHTML = ''; tabContents.innerHTML = '';
+    scores = { correct: 0, total: 0 };
+    let first = null;
+
+    if (wQ && data.qcm?.length) {
+      const id = 'tab-qcm'; if (!first) first = id;
+      tabBar.innerHTML += `<div class="tab" data-tab="${id}" onclick="switchTab('${id}')">🎯 QCM <span class="tab-badge">${data.qcm.length}</span></div>`;
+      tabContents.innerHTML += `<div class="tab-content" id="${id}">${renderQCM(data.qcm)}</div>`;
+    }
+    if (wF && data.flashcards?.length) {
+      const id = 'tab-flash'; if (!first) first = id;
+      tabBar.innerHTML += `<div class="tab" data-tab="${id}" onclick="switchTab('${id}')">⚡ Flashcards <span class="tab-badge">${data.flashcards.length}</span></div>`;
+      tabContents.innerHTML += `<div class="tab-content" id="${id}">${renderFlashcards(data.flashcards)}</div>`;
+    }
+    if (wS && data.summary) {
+      const id = 'tab-summary'; if (!first) first = id;
+      tabBar.innerHTML += `<div class="tab" data-tab="${id}" onclick="switchTab('${id}')">📋 Résumé</div>`;
+      tabContents.innerHTML += `<div class="tab-content" id="${id}">${renderSummary(data.summary)}</div>`;
+    }
+
+    if (first) switchTab(first);
+
+    // Show paywall hint if credits low
+    if (!isPro && credits === 0) {
+      document.getElementById('pricingBanner').classList.remove('hidden');
+    }
+  }
+
+  function switchTab(id) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab===id));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.toggle('active', t.id===id));
+  }
+
+  function renderQCM(qcm) {
+    scores.total = qcm.length;
+    return qcm.map((q,i) => `
+      <div class="qcm-item" id="qcm-${i}">
+        <div class="qcm-num">Question ${i+1} / ${qcm.length}</div>
+        <div class="qcm-question">${q.question}</div>
+        <div class="qcm-options">
+          ${q.options.map((o,j) => `<div class="qcm-option" onclick="answerQCM(${i},${j},${q.correct})" id="opt-${i}-${j}"><span class="opt-letter">${String.fromCharCode(65+j)}</span>${o}</div>`).join('')}
+        </div>
+        <div class="explanation" id="exp-${i}">💡 ${q.explanation}</div>
+      </div>`).join('') +
+    `<div class="score-row" id="scoreRow" style="display:none">
+      <span class="score-label">Score</span>
+      <div class="score-track"><div class="score-fill" id="scoreFill"></div></div>
+      <span class="score-val" id="scoreVal">0/${scores.total}</span>
+    </div>`;
+  }
+
+  function answerQCM(qi, chosen, correct) {
+    const item = document.getElementById(`qcm-${qi}`);
+    if (item.dataset.answered) return;
+    item.dataset.answered = '1';
+    for (let j=0;j<4;j++) {
+      const o = document.getElementById(`opt-${qi}-${j}`);
+      if (!o) continue;
+      if (j===correct) o.classList.add('correct');
+      else if (j===chosen) o.classList.add('wrong');
+    }
+    document.getElementById(`exp-${qi}`).classList.add('visible');
+    if (chosen===correct) scores.correct++;
+    if (document.querySelectorAll('.qcm-item[data-answered]').length === scores.total) {
+      const pct = Math.round(scores.correct/scores.total*100);
+      const row = document.getElementById('scoreRow');
+      row.style.display = 'flex';
+      setTimeout(() => {
+        document.getElementById('scoreFill').style.width = pct+'%';
+        document.getElementById('scoreVal').textContent = `${scores.correct}/${scores.total}`;
+      }, 100);
+    }
+  }
+
+  function renderFlashcards(cards) {
+    return `<div class="flashcard-grid">${cards.map(c => `
+      <div class="flashcard" onclick="this.classList.toggle('revealed')">
+        <div class="flashcard-tag">${c.category||'Concept'}</div>
+        <div class="flashcard-front">${c.concept}</div>
+        <div class="flashcard-back">${c.definition}</div>
+      </div>`).join('')}</div>`;
+  }
+
+  function renderSummary(s) {
+    return `<div class="summary-block">
+      <p style="color:var(--muted);font-size:13px;margin-bottom:18px">${s.intro||''}</p>
+      ${(s.sections||[]).map(sec => `<h3>${sec.title}</h3>${(sec.points||[]).map(p=>`<div class="key-point">${p}</div>`).join('')}`).join('')}
+    </div>`;
+  }
+
+  function reset() {
+    document.getElementById('results').classList.remove('visible');
+    document.getElementById('formSection').style.display = 'block';
+    document.getElementById('generateBtn').disabled = false;
+    if (!isPro && credits <= 0) {
+      document.getElementById('generateBtn').textContent = '🔒 Débloquer l\'accès illimité';
+      document.getElementById('generateBtn').onclick = () => openModal('yearly');
+    }
+  }
+
+  function showError(msg) { const b=document.getElementById('errorBox'); b.textContent=msg; b.classList.add('visible'); }
+  function hideError() { document.getElementById('errorBox').classList.remove('visible'); }
+
+  // ─── STRIPE MODAL ─────────────────────────────────────────
+  function openModal(plan) {
+    selectedPlan = plan || 'yearly';
+    selectPlan(selectedPlan);
+
+    if (!stripe) {
+      stripe = Stripe(STRIPE_KEY);
+      const elements = stripe.elements();
+      cardElement = elements.create('card', {
+        style: {
+          base: { color: '#e8e8f0', fontFamily: 'DM Mono, monospace', fontSize: '14px', '::placeholder': { color: '#6b6b80' } },
+          invalid: { color: '#ff4466' }
+        }
+      });
+      cardElement.mount('#card-element');
+      cardElement.on('focus', () => document.getElementById('card-element').classList.add('focused'));
+      cardElement.on('blur', () => document.getElementById('card-element').classList.remove('focused'));
+      cardElement.on('change', e => { document.getElementById('card-errors').textContent = e.error ? e.error.message : ''; });
+    }
+
+    document.getElementById('modalOverlay').classList.add('visible');
+  }
+
+  function closeModal() { document.getElementById('modalOverlay').classList.remove('visible'); }
+  function closeModalOutside(e) { if (e.target === document.getElementById('modalOverlay')) closeModal(); }
+
+  function selectPlan(plan) {
+    selectedPlan = plan;
+    document.getElementById('planMonthly').classList.toggle('selected', plan==='monthly');
+    document.getElementById('planYearly').classList.toggle('selected', plan==='yearly');
+    const price = plan==='yearly' ? '35,88€/an (2,99€/mois)' : '4,99€/mois';
+    document.getElementById('payBtn').textContent = `Débloquer · ${price}`;
+  }
+
+  async function processPayment() {
+    const btn = document.getElementById('payBtn');
+    btn.disabled = true;
+    btn.textContent = 'Traitement en cours…';
+    document.getElementById('card-errors').textContent = '';
+
+    try {
+      // In test mode: create a payment method and simulate success
+      const { paymentMethod, error } = await stripe.createPaymentMethod({ type: 'card', card: cardElement });
+
+      if (error) {
+        document.getElementById('card-errors').textContent = error.message;
+        btn.disabled = false;
+        selectPlan(selectedPlan);
+        return;
+      }
+
+      // Simulate successful payment (in production, you'd call your backend here)
+      // For now we activate Pro mode directly after card validation
+      activatePro();
+
+    } catch(err) {
+      document.getElementById('card-errors').textContent = 'Une erreur est survenue. Réessaie.';
+      btn.disabled = false;
+      selectPlan(selectedPlan);
+    }
+  }
+
+  function activatePro() {
+    isPro = true;
+    localStorage.setItem('sf_pro', '1');
+    updateCreditsUI();
+    showProState();
+
+    // Show success screen
+    document.getElementById('modalContent').innerHTML = `
+      <div class="success-modal">
+        <div class="success-icon">🎉</div>
+        <div class="success-title">Accès Pro activé !</div>
+        <div class="success-text">Félicitations ! Tu as maintenant un accès illimité à StudyForge.<br><br>Génère autant de fiches que tu veux pour toutes tes matières.</div>
+        <button class="btn-pay" style="margin-top:24px" onclick="closeModal()">Commencer à réviser →</button>
+      </div>`;
+  }
+
+  // ─── START ────────────────────────────────────────────────
+  init();
+</script>
+</body>
+</html>
