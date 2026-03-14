@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudyForge — Révise autrement</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --border: #1e1e2e;
+    --accent: #c8f135;
+    --accent2: #7c3aed;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --card: #13131e;
+    --error: #ff4466;
+    --success: #c8f135;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(200,241,53,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(200,241,53,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header {
+    padding: 40px 0 32px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 28px;
+    letter-spacing: -1px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-dot {
+    width: 10px; height: 10px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: inline-block;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .tagline {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* Step indicator */
+  .steps {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 40px;
+    align-items: center;
+  }
+
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    transition: color 0.3s;
+  }
+
+  .step.active { color: var(--accent); }
+  .step.done { color: var(--muted); }
+
+  .step-num {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 1px solid currentColor;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .step.active .step-num {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+  }
+
+  .step-sep {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+    max-width: 40px;
+  }
+
+  /* Input section */
+  .input-section { margin-bottom: 32px; }
+
+  label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  textarea {
+    width: 100%;
+    height: 200px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    resize: vertical;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+
+  textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(200,241,53,0.08);
+  }
+
+  textarea::placeholder { color: var(--muted); }
+
+  /* Options */
+  .options {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 24px 0;
+  }
+
+  .option-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+  }
+
+  .option-card:hover {
+    border-color: rgba(200,241,53,0.3);
+  }
+
+  .option-card.selected {
+    border-color: var(--accent);
+    background: rgba(200,241,53,0.05);
+  }
+
+  .option-icon {
+    font-size: 20px;
+    margin-bottom: 8px;
+  }
+
+  .option-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+
+  .option-desc {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .option-check {
+    width: 16px; height: 16px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-top: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    transition: all 0.2s;
+  }
+
+  .option-card.selected .option-check {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg);
+  }
+
+  /* Count selector */
+  .count-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .count-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .count-btns {
+    display: flex;
+    gap: 4px;
+  }
+
+  .count-btn {
+    width: 32px; height: 32px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .count-btn:hover, .count-btn.active {
+    border-color: var(--accent);
+    background: rgba(200,241,53,0.08);
+    color: var(--accent);
+  }
+
+  /* Generate button */
+  .btn-generate {
+    width: 100%;
+    padding: 18px;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px;
+    text-transform: uppercase;
+  }
+
+  .btn-generate:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(200,241,53,0.25);
+  }
+
+  .btn-generate:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* Loader */
+  .loader {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    padding: 60px 0;
+    gap: 20px;
+  }
+
+  .loader.visible { display: flex; }
+
+  .loader-bar {
+    width: 200px;
+    height: 2px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .loader-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    animation: loading 1.5s ease-in-out infinite;
+  }
+
+  @keyframes loading {
+    0% { width: 0%; margin-left: 0; }
+    50% { width: 60%; margin-left: 20%; }
+    100% { width: 0%; margin-left: 100%; }
+  }
+
+  .loader-text {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* Results */
+  #results { display: none; }
+  #results.visible { display: block; }
+
+  .results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .results-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+  }
+
+  .btn-reset {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+
+  .btn-reset:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tab {
+    padding: 12px 24px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.2s;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .tab-badge {
+    background: var(--border);
+    color: var(--muted);
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 9px;
+  }
+
+  .tab.active .tab-badge {
+    background: rgba(200,241,53,0.15);
+    color: var(--accent);
+  }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* QCM */
+  .qcm-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 16px;
+    transition: border-color 0.2s;
+  }
+
+  .qcm-item:hover { border-color: rgba(200,241,53,0.2); }
+
+  .qcm-num {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .qcm-question {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+
+  .qcm-options {
+    display: grid;
+    gap: 8px;
+  }
+
+  .qcm-option {
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .qcm-option:hover { border-color: rgba(200,241,53,0.3); }
+
+  .qcm-option.correct {
+    border-color: var(--accent);
+    background: rgba(200,241,53,0.08);
+    color: var(--accent);
+  }
+
+  .qcm-option.wrong {
+    border-color: var(--error);
+    background: rgba(255,68,102,0.08);
+    color: var(--error);
+  }
+
+  .opt-letter {
+    width: 22px; height: 22px;
+    border-radius: 4px;
+    background: var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .explanation {
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: rgba(200,241,53,0.05);
+    border-left: 2px solid var(--accent);
+    border-radius: 0 6px 6px 0;
+    font-size: 12px;
+    color: var(--muted);
+    display: none;
+    line-height: 1.6;
+  }
+
+  .explanation.visible { display: block; }
+
+  /* Flashcards */
+  .flashcard-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .flashcard {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    cursor: pointer;
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .flashcard:hover {
+    border-color: rgba(200,241,53,0.3);
+    transform: translateY(-2px);
+  }
+
+  .flashcard::after {
+    content: 'Cliquer pour révéler';
+    position: absolute;
+    bottom: 12px;
+    right: 14px;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .flashcard.revealed::after { content: 'Cliquer pour masquer'; }
+
+  .flashcard-front {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    flex: 1;
+    line-height: 1.5;
+  }
+
+  .flashcard-tag {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  .flashcard-back {
+    display: none;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .flashcard.revealed .flashcard-back { display: block; }
+
+  /* Summary */
+  .summary-block {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 28px;
+    line-height: 1.8;
+  }
+
+  .summary-block h3 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--accent);
+    margin-bottom: 12px;
+    margin-top: 24px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .summary-block h3:first-child { margin-top: 0; }
+
+  .summary-block h3::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .summary-block p {
+    font-size: 14px;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+
+  .key-point {
+    display: flex;
+    gap: 12px;
+    padding: 12px 14px;
+    background: rgba(200,241,53,0.04);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .key-point::before {
+    content: '→';
+    color: var(--accent);
+    flex-shrink: 0;
+    font-size: 12px;
+    margin-top: 1px;
+  }
+
+  /* Score bar */
+  .score-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 18px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-top: 20px;
+  }
+
+  .score-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  .score-track {
+    flex: 1;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .score-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.5s ease;
+    width: 0%;
+  }
+
+  .score-val {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--accent);
+    flex-shrink: 0;
+    min-width: 40px;
+    text-align: right;
+  }
+
+  /* Error */
+  .error-box {
+    padding: 16px 20px;
+    background: rgba(255,68,102,0.08);
+    border: 1px solid rgba(255,68,102,0.3);
+    border-radius: 8px;
+    color: var(--error);
+    font-size: 13px;
+    margin-bottom: 20px;
+    display: none;
+  }
+
+  .error-box.visible { display: block; }
+
+  @media (max-width: 600px) {
+    .options { grid-template-columns: 1fr; }
+    .flashcard-grid { grid-template-columns: 1fr; }
+    .tab { padding: 10px 14px; font-size: 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo">
+      <span class="logo-dot"></span>
+      StudyForge
+    </div>
+    <div class="tagline">Générateur de révision IA · Toutes matières</div>
+  </header>
+
+  <!-- INPUT FORM -->
+  <div id="formSection">
+    <div class="steps">
+      <div class="step active" id="s1">
+        <div class="step-num">1</div>
+        <span>Ton cours</span>
+      </div>
+      <div class="step-sep"></div>
+      <div class="step" id="s2">
+        <div class="step-num">2</div>
+        <span>Options</span>
+      </div>
+      <div class="step-sep"></div>
+      <div class="step" id="s3">
+        <div class="step-num">3</div>
+        <span>Résultats</span>
+      </div>
+    </div>
+
+    <div class="input-section">
+      <label>Colle ton cours ou ta leçon ici</label>
+      <textarea id="courseText" placeholder="Ex : La dérivée d'une fonction f en un point a est la limite du taux d'accroissement... Colle ici n'importe quel texte de cours, chapitre, ou notes."></textarea>
+    </div>
+
+    <label>Ce que tu veux générer</label>
+    <div class="options">
+      <div class="option-card selected" data-type="qcm" onclick="toggleOption(this)">
+        <div class="option-icon">🎯</div>
+        <div class="option-title">QCM</div>
+        <div class="option-desc">Questions à choix multiples avec correction</div>
+        <div class="option-check">✓</div>
+      </div>
+      <div class="option-card selected" data-type="flash" onclick="toggleOption(this)">
+        <div class="option-icon">⚡</div>
+        <div class="option-title">Flashcards</div>
+        <div class="option-desc">Cartes question / réponse à retourner</div>
+        <div class="option-check">✓</div>
+      </div>
+      <div class="option-card selected" data-type="summary" onclick="toggleOption(this)">
+        <div class="option-icon">📋</div>
+        <div class="option-title">Résumé</div>
+        <div class="option-desc">Synthèse structurée des points clés</div>
+        <div class="option-check">✓</div>
+      </div>
+    </div>
+
+    <div class="count-row">
+      <span class="count-label">Nombre de questions</span>
+      <div class="count-btns">
+        <button class="count-btn" data-val="3" onclick="setCount(this)">3</button>
+        <button class="count-btn active" data-val="5" onclick="setCount(this)">5</button>
+        <button class="count-btn" data-val="8" onclick="setCount(this)">8</button>
+        <button class="count-btn" data-val="10" onclick="setCount(this)">10</button>
+      </div>
+    </div>
+
+    <div class="error-box" id="errorBox"></div>
+
+    <button class="btn-generate" id="generateBtn" onclick="generate()">
+      <span>⚡</span> Générer ma révision
+    </button>
+  </div>
+
+  <!-- LOADER -->
+  <div class="loader" id="loader">
+    <div class="loader-bar"><div class="loader-fill"></div></div>
+    <div class="loader-text" id="loaderText">Analyse du cours…</div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results">
+    <div class="results-header">
+      <div class="results-title">Tes fiches de révision</div>
+      <button class="btn-reset" onclick="reset()">← Nouveau cours</button>
+    </div>
+
+    <div class="tabs" id="tabBar"></div>
+
+    <div id="tabContents"></div>
+  </div>
+</div>
+
+<script>
+  let count = 5;
+  let selected = new Set(['qcm', 'flash', 'summary']);
+  let scores = { correct: 0, total: 0 };
+
+  function toggleOption(el) {
+    const t = el.dataset.type;
+    if (selected.has(t)) {
+      if (selected.size === 1) return;
+      selected.delete(t);
+      el.classList.remove('selected');
+      el.querySelector('.option-check').textContent = '';
+    } else {
+      selected.add(t);
+      el.classList.add('selected');
+      el.querySelector('.option-check').textContent = '✓';
+    }
+  }
+
+  function setCount(el) {
+    document.querySelectorAll('.count-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    count = parseInt(el.dataset.val);
+  }
+
+  function showError(msg) {
+    const box = document.getElementById('errorBox');
+    box.textContent = msg;
+    box.classList.add('visible');
+  }
+
+  function hideError() {
+    document.getElementById('errorBox').classList.remove('visible');
+  }
+
+  async function generate() {
+    const text = document.getElementById('courseText').value.trim();
+    if (!text || text.length < 30) {
+      showError('Merci de coller un texte de cours (minimum 30 caractères).');
+      return;
+    }
+    hideError();
+
+    const btn = document.getElementById('generateBtn');
+    btn.disabled = true;
+    document.getElementById('formSection').style.display = 'none';
+    document.getElementById('loader').classList.add('visible');
+
+    const loaderMsgs = ['Analyse du cours…', 'Génération des questions…', 'Construction des flashcards…', 'Rédaction du résumé…', 'Finalisation…'];
+    let mi = 0;
+    const lt = document.getElementById('loaderText');
+    const loaderInterval = setInterval(() => {
+      mi = (mi + 1) % loaderMsgs.length;
+      lt.textContent = loaderMsgs[mi];
+    }, 1200);
+
+    const wantQcm = selected.has('qcm');
+    const wantFlash = selected.has('flash');
+    const wantSummary = selected.has('summary');
+
+    const prompt = `Tu es un expert pédagogique. Analyse ce cours et génère le contenu demandé.
+
+COURS:
+${text}
+
+GÉNÈRE un JSON valide avec exactement cette structure (sans markdown, sans backticks, juste le JSON brut):
+{
+  ${wantQcm ? `"qcm": [${count} objets avec: "question" (string), "options" (array de 4 strings), "correct" (index 0-3), "explanation" (string courte)],` : '"qcm": [],'}
+  ${wantFlash ? `"flashcards": [${count} objets avec: "concept" (string court), "definition" (string), "category" (string ex: "Définition", "Formule", "Exemple")],` : '"flashcards": [],'}
+  ${wantSummary ? `"summary": {"title": "string", "intro": "string 2-3 phrases", "sections": [3-4 objets avec "title" et "points" (array de strings)]}"` : '"summary": null'}
+}
+
+RÈGLES STRICTES:
+- JSON valide uniquement, aucun texte avant ou après
+- Questions claires et précises basées sur le cours
+- Options plausibles pour les QCM
+- Flashcards concises et mémorables
+- Tout en français`;
+
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 4000,
+          messages: [{ role: "user", content: prompt }]
+        })
+      });
+
+      const data = await res.json();
+      clearInterval(loaderInterval);
+
+      if (!res.ok || data.error) {
+        throw new Error(data.error?.message || 'Erreur API');
+      }
+
+      const rawText = data.content.map(i => i.text || '').join('');
+      const clean = rawText.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
+
+      renderResults(parsed, wantQcm, wantFlash, wantSummary);
+
+    } catch (err) {
+      clearInterval(loaderInterval);
+      document.getElementById('loader').classList.remove('visible');
+      document.getElementById('formSection').style.display = 'block';
+      btn.disabled = false;
+      showError('Erreur lors de la génération. Vérifie ta connexion et réessaie.');
+      console.error(err);
+    }
+  }
+
+  function renderResults(data, wantQcm, wantFlash, wantSummary) {
+    document.getElementById('loader').classList.remove('visible');
+    const results = document.getElementById('results');
+    results.classList.add('visible');
+
+    const tabBar = document.getElementById('tabBar');
+    const tabContents = document.getElementById('tabContents');
+    tabBar.innerHTML = '';
+    tabContents.innerHTML = '';
+
+    scores = { correct: 0, total: 0 };
+
+    let firstTab = null;
+
+    if (wantQcm && data.qcm && data.qcm.length > 0) {
+      const id = 'tab-qcm';
+      if (!firstTab) firstTab = id;
+      tabBar.innerHTML += `<div class="tab" data-tab="${id}" onclick="switchTab('${id}')">🎯 QCM <span class="tab-badge">${data.qcm.length}</span></div>`;
+      tabContents.innerHTML += `<div class="tab-content" id="${id}">${renderQCM(data.qcm)}</div>`;
+    }
+
+    if (wantFlash && data.flashcards && data.flashcards.length > 0) {
+      const id = 'tab-flash';
+      if (!firstTab) firstTab = id;
+      tabBar.innerHTML += `<div class="tab" data-tab="${id}" onclick="switchTab('${id}')">⚡ Flashcards <span class="tab-badge">${data.flashcards.length}</span></div>`;
+      tabContents.innerHTML += `<div class="tab-content" id="${id}">${renderFlashcards(data.flashcards)}</div>`;
+    }
+
+    if (wantSummary && data.summary) {
+      const id = 'tab-summary';
+      if (!firstTab) firstTab = id;
+      tabBar.innerHTML += `<div class="tab" data-tab="${id}" onclick="switchTab('${id}')">📋 Résumé</div>`;
+      tabContents.innerHTML += `<div class="tab-content" id="${id}">${renderSummary(data.summary)}</div>`;
+    }
+
+    if (firstTab) switchTab(firstTab);
+  }
+
+  function switchTab(id) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === id));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.toggle('active', t.id === id));
+  }
+
+  function renderQCM(qcm) {
+    scores.total = qcm.length;
+    return qcm.map((q, i) => `
+      <div class="qcm-item" id="qcm-${i}">
+        <div class="qcm-num">Question ${i + 1} / ${qcm.length}</div>
+        <div class="qcm-question">${q.question}</div>
+        <div class="qcm-options">
+          ${q.options.map((opt, j) => `
+            <div class="qcm-option" onclick="answerQCM(${i}, ${j}, ${q.correct})" id="opt-${i}-${j}">
+              <span class="opt-letter">${String.fromCharCode(65+j)}</span>
+              ${opt}
+            </div>
+          `).join('')}
+        </div>
+        <div class="explanation" id="exp-${i}">💡 ${q.explanation}</div>
+      </div>
+    `).join('') + `<div class="score-row" id="scoreRow" style="display:none">
+      <span class="score-label">Score</span>
+      <div class="score-track"><div class="score-fill" id="scoreFill"></div></div>
+      <span class="score-val" id="scoreVal">0/${scores.total}</span>
+    </div>`;
+  }
+
+  function answerQCM(qi, chosen, correct) {
+    const item = document.getElementById(`qcm-${qi}`);
+    if (item.dataset.answered) return;
+    item.dataset.answered = '1';
+
+    for (let j = 0; j < 4; j++) {
+      const opt = document.getElementById(`opt-${qi}-${j}`);
+      if (!opt) continue;
+      if (j === correct) opt.classList.add('correct');
+      else if (j === chosen) opt.classList.add('wrong');
+    }
+
+    document.getElementById(`exp-${qi}`).classList.add('visible');
+
+    if (chosen === correct) scores.correct++;
+
+    const answered = document.querySelectorAll('.qcm-item[data-answered]').length;
+    if (answered === scores.total) {
+      const pct = Math.round(scores.correct / scores.total * 100);
+      const row = document.getElementById('scoreRow');
+      row.style.display = 'flex';
+      setTimeout(() => {
+        document.getElementById('scoreFill').style.width = pct + '%';
+        document.getElementById('scoreVal').textContent = `${scores.correct}/${scores.total}`;
+      }, 100);
+    }
+  }
+
+  function renderFlashcards(cards) {
+    return `<div class="flashcard-grid">${cards.map((c, i) => `
+      <div class="flashcard" onclick="flipCard(this)">
+        <div class="flashcard-tag">${c.category || 'Concept'}</div>
+        <div class="flashcard-front">${c.concept}</div>
+        <div class="flashcard-back">${c.definition}</div>
+      </div>
+    `).join('')}</div>`;
+  }
+
+  function flipCard(el) {
+    el.classList.toggle('revealed');
+  }
+
+  function renderSummary(s) {
+    const sections = (s.sections || []).map(sec => `
+      <h3>${sec.title}</h3>
+      ${(sec.points || []).map(p => `<div class="key-point">${p}</div>`).join('')}
+    `).join('');
+    return `<div class="summary-block">
+      <p style="color:var(--muted);font-size:13px;margin-bottom:20px">${s.intro || ''}</p>
+      ${sections}
+    </div>`;
+  }
+
+  function reset() {
+    document.getElementById('results').classList.remove('visible');
+    document.getElementById('formSection').style.display = 'block';
+    document.getElementById('generateBtn').disabled = false;
+    document.getElementById('courseText').value = '';
+  }
+</script>
+</body>
+</html>
